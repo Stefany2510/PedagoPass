@@ -1,0 +1,13 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+:root{--radius:1rem}
+html,body{height:100%}
+body{@apply bg-white text-slate-900 dark:bg-slate-950 dark:text-slate-100}
+.container-max{@apply max-w-7xl mx-auto px-4 sm:px-6 lg:px-8}
+
+@layer utilities{
+	.section{@apply py-12 md:py-16}
+	.text-balance{text-wrap:balance}
+	.focus-ring{@apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-slate-950}
+}

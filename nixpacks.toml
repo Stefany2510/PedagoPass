@@ -1,0 +1,18 @@
+providers = ["node"]
+
+[variables]
+NODE_ENV = "production"
+
+[phases.install]
+cmds = [
+  "npm ci --prefix backend",
+  "npm run prisma:generate --prefix backend"
+]
+
+[phases.build]
+cmds = [
+  "npm run build --prefix backend"
+]
+
+[start]
+cmd = "npm start --prefix backend"

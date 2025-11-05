@@ -1,0 +1,97 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String   @id @default(cuid())
+  nome         String
+  email        String   @unique
+  passwordHash String
+  createdAt    DateTime @default(now())
+  memberships  CommunityMembership[]
+  reservations Reservation[]
+  orders       Order[]
+  quickTokens  QuickToken[]
+}
+
+model CommunityMembership {
+  id       Int      @id @default(autoincrement())
+  userId   String
+  slug     String
+  joinedAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, slug])
+}
+
+enum ReservationStatus {
+  pendente
+  confirmada
+  cancelada
+}
+
+model Reservation {
+  id             String            @id @default(cuid())
+  userId         String
+  destinoSlug    String
+  destinoNome    String
+  destinoImagem  String?
+  createdAt      DateTime          @default(now())
+  ida            DateTime
+  volta          DateTime
+  pessoas        Int
+  formaPagamento String?
+  totalEstimado  Int
+  status         ReservationStatus @default(pendente)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  orders Order[]
+}
+
+model Order {
+  id             String   @id @default(cuid())
+  userId         String
+  reservationId  String?
+  destinoSlug    String
+  destinoNome    String
+  total          Int
+  metodo         String
+  parcelas       Int?
+  pagoEm         DateTime @default(now())
+
+  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  reservation Reservation? @relation(fields: [reservationId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([reservationId])
+}
+
+model Community {
+  slug      String   @id
+  nome      String
+  descricao String
+  membros   Int
+  tags      String   // armazenado como CSV (ex: "História,Patrimônio,MG")
+  capa      String?
+  createdAt DateTime @default(now())
+}
+
+model QuickToken {
+  id        String   @id @default(cuid())
+  userId    String
+  token     String   @unique
+  expiresAt DateTime
+  used      Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+}
