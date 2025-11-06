@@ -38,12 +38,21 @@ router.get('/:slug', async (req: Request, res: Response) => {
 
 router.post('/:slug/join', requireAuth, async (req: AuthedRequest, res: Response) => {
   const slug = String(req.params.slug);
-  await prisma.communityMembership.upsert({
-    where: { userId_slug: { userId: req.userId!, slug } },
-    update: {},
-    create: { userId: req.userId!, slug },
-  });
-  return res.json({ ok: true });
+  try {
+    await prisma.communityMembership.upsert({
+      where: { userId_slug: { userId: req.userId!, slug } },
+      update: {},
+      create: { userId: req.userId!, slug },
+    });
+    return res.json({ ok: true });
+  } catch (err: any) {
+    // P2002 = unique constraint violation (já existe)
+    if (err.code === 'P2002') {
+      return res.json({ ok: true }); // Já membro, retorna sucesso
+    }
+    console.error('Join community error:', err);
+    return res.status(500).json({ ok: false, error: 'internal_error' });
+  }
 });
 
 router.delete('/:slug/join', requireAuth, async (req: AuthedRequest, res: Response) => {
