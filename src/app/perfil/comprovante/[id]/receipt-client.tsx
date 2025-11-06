@@ -44,12 +44,21 @@ export default function ReceiptClient({ id }: { id: string }){
     );
   }
 
+  // Carregando
+  if (!order && !reservation) {
+    return (
+      <div className="p-8 rounded-2xl border border-slate-200 dark:border-slate-800 text-center shadow-soft-md">
+        <h1 className="text-2xl font-bold">Carregando comprovante...</h1>
+      </div>
+    );
+  }
+
   return (
     <div className="rounded-2xl border border-slate-200 dark:border-slate-800 overflow-hidden shadow-soft-md print:shadow-none">
       <div className="p-6 border-b border-slate-200 dark:border-slate-800 flex items-start justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold">Comprovante de pagamento</h1>
-          <p className="text-slate-600 dark:text-slate-400">ID: {order!.id}</p>
+          {order && <p className="text-slate-600 dark:text-slate-400">ID: {order.id}</p>}
         </div>
         <button onClick={()=>window.print()} className="px-4 py-2 rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 focus-ring">Imprimir</button>
       </div>
@@ -58,11 +67,11 @@ export default function ReceiptClient({ id }: { id: string }){
           <div className="flex gap-3 items-center">
             {destino?.imagem && (
               <div className="relative h-16 w-24 overflow-hidden rounded-md">
-                <Image src={destino.imagem} alt={order!.destinoNome} fill className="object-cover" />
+                <Image src={destino.imagem} alt={order?.destinoNome ?? 'Destino'} fill className="object-cover" />
               </div>
             )}
             <div>
-              <div className="text-lg font-semibold">{order!.destinoNome}</div>
+              <div className="text-lg font-semibold">{order?.destinoNome ?? 'Carregando...'}</div>
               {reservation && (
                 <div className="text-sm text-slate-600 dark:text-slate-400">
                   {new Date(reservation.ida).toLocaleDateString()} → {new Date(reservation.volta).toLocaleDateString()} • {reservation.pessoas} {reservation.pessoas>1?"pessoas":"pessoa"}
