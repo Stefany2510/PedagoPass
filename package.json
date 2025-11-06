@@ -6,7 +6,10 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "env:report": "node ops/env/print-env-audit.cjs",
+    "env:check:frontend": "ts-node scripts/check-frontend-env.ts",
+    "env:check:backend": "npm run env:check:backend --prefix backend"
   },
   "dependencies": {
     "next": "14.2.5",
