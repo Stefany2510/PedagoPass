@@ -21,28 +21,38 @@ function signSession(input: { id: string; email: string; nome?: string }) {
 // Opção A — token Bearer na resposta
 async function loginBearerMode(req: Request, res: Response) {
   const { email, password } = req.body as { email?: string; password?: string };
-  const user = await validateUser(email, password);
-  if (!user) return res.status(401).json({ error: 'credenciais_invalidas' });
+  try {
+    const user = await validateUser(email, password);
+    if (!user) return res.status(401).json({ error: 'credenciais_invalidas' });
 
-  const token = signSession({ id: user.id, email: user.email, nome: user.nome });
-  return res.json({ ok: true, token, user });
+    const token = signSession({ id: user.id, email: user.email, nome: user.nome });
+    return res.json({ ok: true, token, user });
+  } catch (err) {
+    console.error('Login error:', err);
+    return res.status(500).json({ ok: false, error: 'internal_error' });
+  }
 }
 
 // Opção B — cookie HttpOnly
 async function loginCookieMode(req: Request, res: Response) {
   const { email, password } = req.body as { email?: string; password?: string };
-  const user = await validateUser(email, password);
-  if (!user) return res.status(401).json({ error: 'credenciais_invalidas' });
+  try {
+    const user = await validateUser(email, password);
+    if (!user) return res.status(401).json({ error: 'credenciais_invalidas' });
 
-  const token = signSession({ id: user.id, email: user.email, nome: user.nome });
-  res.cookie('pp_session', token, {
-    httpOnly: true,
-    secure: true,
-    sameSite: 'none',
-    path: '/',
-    maxAge: 1000 * 60 * 60 * 24 * 7,
-  });
-  return res.json({ ok: true, token, user });
+    const token = signSession({ id: user.id, email: user.email, nome: user.nome });
+    res.cookie('pp_session', token, {
+      httpOnly: true,
+      secure: true,
+      sameSite: 'none',
+      path: '/',
+      maxAge: 1000 * 60 * 60 * 24 * 7,
+    });
+    return res.json({ ok: true, token, user });
+  } catch (err) {
+    console.error('Cookie login error:', err);
+    return res.status(500).json({ ok: false, error: 'internal_error' });
+  }
 }
 
 export async function login(req: Request, res: Response) {
@@ -61,19 +71,24 @@ export async function signup(req: Request, res: Response) {
   if (!email || !/\S+@\S+\.\S+/.test(email)) return res.status(400).json({ error: 'E-mail inválido.' });
   if (!senha || senha.length < 6) return res.status(400).json({ error: 'A senha deve ter ao menos 6 caracteres.' });
 
-  const exists = await prisma.user.findUnique({ where: { email: email.toLowerCase() } });
-  if (exists) return res.status(409).json({ error: 'Já existe uma conta com este e-mail.' });
+  try {
+    const exists = await prisma.user.findUnique({ where: { email: email.toLowerCase() } });
+    if (exists) return res.status(409).json({ error: 'Já existe uma conta com este e-mail.' });
 
-  const user = await prisma.user.create({
-    data: {
-      nome: nome.trim(),
-      email: email.toLowerCase(),
-      passwordHash: hashPassword(senha),
-    },
-  });
+    const user = await prisma.user.create({
+      data: {
+        nome: nome.trim(),
+        email: email.toLowerCase(),
+        passwordHash: hashPassword(senha),
+      },
+    });
 
-  const token = signSession({ id: user.id, email: user.email, nome: user.nome });
-  return res.status(201).json({ ok: true, token, user: { id: user.id, nome: user.nome, email: user.email, createdAt: user.createdAt } });
+    const token = signSession({ id: user.id, email: user.email, nome: user.nome });
+    return res.status(201).json({ ok: true, token, user: { id: user.id, nome: user.nome, email: user.email, createdAt: user.createdAt } });
+  } catch (err) {
+    console.error('Signup error:', err);
+    return res.status(500).json({ ok: false, error: 'internal_error' });
+  }
 }
 
 export async function logout(_req: Request, res: Response) {
@@ -95,27 +110,37 @@ export async function me(req: AuthedRequest, res: Response) {
 export async function createQuickToken(req: AuthedRequest, res: Response) {
   const userId = req.userId;
   if (!userId) return res.status(401).json({ error: 'Não autenticado' });
-  const token = randomBytes(24).toString('base64url');
-  const expiresAt = new Date(Date.now() + 5 * 60 * 1000);
-  await prisma.quickToken.create({ data: { userId, token, expiresAt } });
-  return res.json({ ok: true, token, expiresAt });
+  try {
+    const token = randomBytes(24).toString('base64url');
+    const expiresAt = new Date(Date.now() + 5 * 60 * 1000);
+    await prisma.quickToken.create({ data: { userId, token, expiresAt } });
+    return res.json({ ok: true, token, expiresAt });
+  } catch (err) {
+    console.error('Quick token creation error:', err);
+    return res.status(500).json({ ok: false, error: 'internal_error' });
+  }
 }
 
 export async function loginWithQuickToken(req: Request, res: Response) {
   const { token } = req.body as { token?: string };
   if (!token) return res.status(400).json({ error: 'Token ausente' });
 
-  const record = await prisma.quickToken.findUnique({ where: { token } });
-  if (!record) return res.status(404).json({ error: 'Token inválido' });
-  if (record.used) return res.status(400).json({ error: 'Token já utilizado' });
-  if (record.expiresAt.getTime() < Date.now()) return res.status(400).json({ error: 'Token expirado' });
+  try {
+    const record = await prisma.quickToken.findUnique({ where: { token } });
+    if (!record) return res.status(404).json({ error: 'Token inválido' });
+    if (record.used) return res.status(400).json({ error: 'Token já utilizado' });
+    if (record.expiresAt.getTime() < Date.now()) return res.status(400).json({ error: 'Token expirado' });
 
-  const user = await prisma.user.findUnique({ where: { id: record.userId } });
-  if (!user) return res.status(404).json({ error: 'Usuário não encontrado' });
+    const user = await prisma.user.findUnique({ where: { id: record.userId } });
+    if (!user) return res.status(404).json({ error: 'Usuário não encontrado' });
 
-  await prisma.quickToken.update({ where: { token }, data: { used: true } });
-  const jwtToken = signSession({ id: user.id, email: user.email, nome: user.nome });
-  return res.json({ ok: true, token: jwtToken, user: { id: user.id, nome: user.nome, email: user.email, createdAt: user.createdAt } });
+    await prisma.quickToken.update({ where: { token }, data: { used: true } });
+    const jwtToken = signSession({ id: user.id, email: user.email, nome: user.nome });
+    return res.json({ ok: true, token: jwtToken, user: { id: user.id, nome: user.nome, email: user.email, createdAt: user.createdAt } });
+  } catch (err) {
+    console.error('Quick login error:', err);
+    return res.status(500).json({ ok: false, error: 'internal_error' });
+  }
 }
 
 export async function signupDev(_req: Request, res: Response) {

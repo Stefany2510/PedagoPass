@@ -1,0 +1,314 @@
+[
+  {
+    "name": "NODE_ENV",
+    "scope": "backend",
+    "required": false,
+    "default": "development",
+    "used_in": ["backend/src/config.ts:5", "backend/src/prisma.ts:8"],
+    "description": "Sets application environment (development/production) for logging and features"
+  },
+  {
+    "name": "PORT",
+    "scope": "backend",
+    "required": false,
+    "default": "8080",
+    "used_in": ["backend/src/config.ts:3", "backend/src/index.ts:50"],
+    "description": "Server port (Railway may override this)"
+  },
+  {
+    "name": "TZ",
+    "scope": "backend",
+    "required": false,
+    "default": "UTC",
+    "used_in": ["System environment"],
+    "description": "Timezone for logging and date operations"
+  },
+  {
+    "name": "PUBLIC_BACKEND_URL",
+    "scope": "backend",
+    "required": false,
+    "default": "http://localhost:8080",
+    "used_in": ["Documentation/deployment scripts"],
+    "description": "Public URL of backend API for documentation and client configuration"
+  },
+  {
+    "name": "CORS_ORIGIN",
+    "scope": "backend",
+    "required": true,
+    "default": "http://localhost:3000",
+    "used_in": ["backend/src/config.ts:10", "backend/src/index.ts:10"],
+    "description": "Comma-separated list of allowed frontend origins (no trailing slash)"
+  },
+  {
+    "name": "WEB_ORIGIN",
+    "scope": "backend",
+    "required": false,
+    "default": "http://localhost:3000",
+    "used_in": ["Alternative name for CORS_ORIGIN"],
+    "description": "Alias for CORS_ORIGIN if preferred"
+  },
+  {
+    "name": "DATABASE_URL",
+    "scope": "backend",
+    "required": true,
+    "default": "",
+    "used_in": ["backend/prisma/schema.prisma:8", "backend/src/config.ts:8"],
+    "description": "Prisma database connection string (MySQL format: mysql://user:pass@host:port/db)"
+  },
+  {
+    "name": "SHADOW_DATABASE_URL",
+    "scope": "backend",
+    "required": false,
+    "default": "",
+    "used_in": ["backend/prisma/schema.prisma (optional for migrations)"],
+    "description": "Optional shadow database URL for Prisma migrations on hosted databases"
+  },
+  {
+    "name": "JWT_SECRET",
+    "scope": "backend",
+    "required": true,
+    "default": "dev-secret-change-me",
+    "used_in": ["backend/src/config.ts:7", "backend/src/middleware/auth.ts:20", "backend/src/controllers/auth.ts:18"],
+    "description": "Secret key for signing JWT tokens (min 32 chars in production)"
+  },
+  {
+    "name": "JWT_EXPIRES_IN",
+    "scope": "backend",
+    "required": false,
+    "default": "7d",
+    "used_in": ["backend/src/controllers/auth.ts (token expiry)"],
+    "description": "JWT token expiration time (e.g., '7d', '24h')"
+  },
+  {
+    "name": "JWT_ISS",
+    "scope": "backend",
+    "required": false,
+    "default": "pedagopass-api",
+    "used_in": ["JWT signing/verification (optional)"],
+    "description": "JWT issuer claim for token validation"
+  },
+  {
+    "name": "JWT_AUD",
+    "scope": "backend",
+    "required": false,
+    "default": "pedagopass-web",
+    "used_in": ["JWT signing/verification (optional)"],
+    "description": "JWT audience claim for token validation"
+  },
+  {
+    "name": "SESSION_SECRET",
+    "scope": "backend",
+    "required": false,
+    "default": "dev-session-secret",
+    "used_in": ["cookie-parser middleware (if using session cookies)"],
+    "description": "Secret for signing session cookies (min 32 chars in production)"
+  },
+  {
+    "name": "COOKIE_SECURE",
+    "scope": "backend",
+    "required": false,
+    "default": "false",
+    "used_in": ["cookie middleware configuration"],
+    "description": "Set to 'true' for HTTPS-only cookies (required for production cross-site)"
+  },
+  {
+    "name": "COOKIE_SAME_SITE",
+    "scope": "backend",
+    "required": false,
+    "default": "lax",
+    "used_in": ["cookie middleware configuration"],
+    "description": "SameSite cookie policy ('none' for cross-site, requires Secure=true)"
+  },
+  {
+    "name": "LOG_LEVEL",
+    "scope": "backend",
+    "required": false,
+    "default": "debug (dev) / info (prod)",
+    "used_in": ["backend/src/config.ts:9"],
+    "description": "Logging verbosity level (debug, info, warn, error)"
+  },
+  {
+    "name": "RATE_LIMIT_WINDOW_MS",
+    "scope": "backend",
+    "required": false,
+    "default": "60000",
+    "used_in": ["express-rate-limit (if implemented)"],
+    "description": "Rate limit window in milliseconds (optional)"
+  },
+  {
+    "name": "RATE_LIMIT_MAX",
+    "scope": "backend",
+    "required": false,
+    "default": "100",
+    "used_in": ["express-rate-limit (if implemented)"],
+    "description": "Maximum requests per window (optional)"
+  },
+  {
+    "name": "MAX_UPLOAD_MB",
+    "scope": "backend",
+    "required": false,
+    "default": "10",
+    "used_in": ["File upload middleware (if implemented)"],
+    "description": "Maximum file upload size in MB (optional)"
+  },
+  {
+    "name": "SMTP_HOST",
+    "scope": "backend",
+    "required": false,
+    "default": "",
+    "used_in": ["Email service (if implemented)"],
+    "description": "SMTP server hostname for sending emails"
+  },
+  {
+    "name": "SMTP_PORT",
+    "scope": "backend",
+    "required": false,
+    "default": "587",
+    "used_in": ["Email service (if implemented)"],
+    "description": "SMTP server port (usually 587 for TLS, 465 for SSL)"
+  },
+  {
+    "name": "SMTP_SECURE",
+    "scope": "backend",
+    "required": false,
+    "default": "false",
+    "used_in": ["Email service (if implemented)"],
+    "description": "Use TLS/SSL for SMTP connection"
+  },
+  {
+    "name": "SMTP_USER",
+    "scope": "backend",
+    "required": false,
+    "default": "",
+    "used_in": ["Email service (if implemented)"],
+    "description": "SMTP authentication username"
+  },
+  {
+    "name": "SMTP_PASS",
+    "scope": "backend",
+    "required": false,
+    "default": "",
+    "used_in": ["Email service (if implemented)"],
+    "description": "SMTP authentication password (SECRET)"
+  },
+  {
+    "name": "SMTP_FROM",
+    "scope": "backend",
+    "required": false,
+    "default": "noreply@pedagopass.com",
+    "used_in": ["Email service (if implemented)"],
+    "description": "Sender email address and name"
+  },
+  {
+    "name": "S3_ENDPOINT",
+    "scope": "backend",
+    "required": false,
+    "default": "https://s3.amazonaws.com",
+    "used_in": ["S3/object storage service (if implemented)"],
+    "description": "S3-compatible storage endpoint URL"
+  },
+  {
+    "name": "S3_REGION",
+    "scope": "backend",
+    "required": false,
+    "default": "us-east-1",
+    "used_in": ["S3/object storage service (if implemented)"],
+    "description": "AWS region for S3 bucket"
+  },
+  {
+    "name": "S3_BUCKET",
+    "scope": "backend",
+    "required": false,
+    "default": "pedagopass-uploads",
+    "used_in": ["S3/object storage service (if implemented)"],
+    "description": "S3 bucket name for file uploads"
+  },
+  {
+    "name": "S3_ACCESS_KEY_ID",
+    "scope": "backend",
+    "required": false,
+    "default": "",
+    "used_in": ["S3/object storage service (if implemented)"],
+    "description": "AWS access key for S3 (SECRET)"
+  },
+  {
+    "name": "S3_SECRET_ACCESS_KEY",
+    "scope": "backend",
+    "required": false,
+    "default": "",
+    "used_in": ["S3/object storage service (if implemented)"],
+    "description": "AWS secret key for S3 (SECRET)"
+  },
+  {
+    "name": "REDIS_URL",
+    "scope": "backend",
+    "required": false,
+    "default": "",
+    "used_in": ["Redis/caching service (if implemented)"],
+    "description": "Redis connection URL (redis://user:pass@host:port)"
+  },
+  {
+    "name": "NEXT_PUBLIC_API_URL",
+    "scope": "frontend",
+    "required": true,
+    "default": "http://localhost:4000",
+    "used_in": ["src/lib/api.ts:1"],
+    "description": "Backend API base URL (exposed to browser, no trailing slash)"
+  },
+  {
+    "name": "NEXT_PUBLIC_ENV",
+    "scope": "frontend",
+    "required": false,
+    "default": "dev",
+    "used_in": ["Frontend environment identifier"],
+    "description": "Environment identifier for frontend logging and features"
+  },
+  {
+    "name": "NEXT_PUBLIC_DEMO_EMAIL",
+    "scope": "frontend",
+    "required": false,
+    "default": "",
+    "used_in": ["src/app/login/login-form.tsx:22"],
+    "description": "Demo email for quick login (development only)"
+  },
+  {
+    "name": "NEXT_PUBLIC_DEMO_PASSWORD",
+    "scope": "frontend",
+    "required": false,
+    "default": "",
+    "used_in": ["src/app/login/login-form.tsx:23"],
+    "description": "Demo password for quick login (development only)"
+  },
+  {
+    "name": "NEXT_PUBLIC_FEATURE_FLAG_RESERVATIONS",
+    "scope": "frontend",
+    "required": false,
+    "default": "true",
+    "used_in": ["Feature flag (if implemented)"],
+    "description": "Enable/disable reservations feature"
+  },
+  {
+    "name": "NEXT_PUBLIC_FEATURE_FLAG_COMMUNITIES",
+    "scope": "frontend",
+    "required": false,
+    "default": "true",
+    "used_in": ["Feature flag (if implemented)"],
+    "description": "Enable/disable communities feature"
+  },
+  {
+    "name": "NEXT_PUBLIC_GTAG_ID",
+    "scope": "frontend",
+    "required": false,
+    "default": "",
+    "used_in": ["Analytics (if implemented)"],
+    "description": "Google Analytics tracking ID"
+  },
+  {
+    "name": "NEXT_PUBLIC_HOTJAR_ID",
+    "scope": "frontend",
+    "required": false,
+    "default": "",
+    "used_in": ["Heatmap analytics (if implemented)"],
+    "description": "Hotjar tracking ID for user session recording"
+  }
+]
