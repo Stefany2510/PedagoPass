@@ -1,6 +1,11 @@
 const BASE = (process.env.NEXT_PUBLIC_API_URL || '').replace(/\/+$/, '');
 const TOKEN_KEY = 'pp_token';
 
+// Debug: log API URL em desenvolvimento
+if (typeof window !== 'undefined' && process.env.NODE_ENV === 'development') {
+  console.log('[API] Using BASE URL:', BASE || '(não configurado - usando /api)');
+}
+
 export type ApiUser = {
   id: string;
   nome: string;
