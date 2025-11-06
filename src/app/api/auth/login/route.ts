@@ -1,7 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { readDB } from '@/server/db';
+import { readDB } from '../../../../server/db';
 import crypto from 'crypto';
-import { setSessionUserId } from '@/server/session';
+
+function setSessionUserId(res: NextResponse, userId: string | number) {
+  // store a simple httpOnly cookie named 'session' with the user id
+  res.cookies.set('session', String(userId), {
+    httpOnly: true,
+    path: '/',
+    sameSite: 'lax',
+    secure: process.env.NODE_ENV === 'production',
+  });
+}
 
 function isEmailValid(email: string) {
   return /\S+@\S+\.\S+/.test(email);
