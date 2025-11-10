@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import clsx from 'clsx';
 import Image from 'next/image';
 import type { Post, PostComment } from '@/data/communityPosts';
@@ -41,22 +41,55 @@ function getInitials(name: string) {
   return initials || 'P';
 }
 
-export function PostItem({ post }: { post: Post }) {
-  const [likes, setLikes] = useState(post.likes);
-  const initialComments = useMemo(() => post.comments ?? [], [post.comments]);
-  const [commentList, setCommentList] = useState<PostComment[]>(initialComments);
-  const [replies, setReplies] = useState(post.replies || initialComments.length);
+type PostItemProps = {
+  post: Post;
+  currentUserName: string | null;
+  onReact: (postId: string, reaction: 'like' | 'dislike') => void;
+  onAddComment: (postId: string, content: string) => void;
+  onEditPost: (postId: string, content: string) => void;
+  onDeletePost: (postId: string) => void;
+  onEditComment: (postId: string, commentId: string, content: string) => void;
+  onDeleteComment: (postId: string, commentId: string) => void;
+};
+
+export function PostItem({
+  post,
+  currentUserName,
+  onReact,
+  onAddComment,
+  onEditPost,
+  onDeletePost,
+  onEditComment,
+  onDeleteComment,
+}: PostItemProps) {
+  const comments = post.comments ?? [];
   const [isReplyOpen, setIsReplyOpen] = useState(false);
   const [replyText, setReplyText] = useState('');
-  const [commentsOpen, setCommentsOpen] = useState(initialComments.length > 0);
+  const [commentsOpen, setCommentsOpen] = useState(comments.length > 0);
+  const [isEditingPost, setIsEditingPost] = useState(false);
+  const [editedContent, setEditedContent] = useState(post.conteudo);
+  const [editingCommentId, setEditingCommentId] = useState<string | null>(null);
+  const [editingCommentText, setEditingCommentText] = useState('');
+
+  useEffect(() => {
+    setEditedContent(post.conteudo);
+  }, [post.conteudo]);
+
+  useEffect(() => {
+    if (comments.length > 0) {
+      setCommentsOpen(true);
+    }
+  }, [comments.length]);
 
   const relativeTime = useMemo(() => formatRelativeTime(post.createdAt), [post.createdAt]);
   const initials = useMemo(() => getInitials(post.autor), [post.autor]);
   const avatarStyle = useMemo(() => avatarColors[post.autor.length % avatarColors.length], [post.autor.length]);
+  const dislikeCount = post.dislikes ?? 0;
+  const commentCount = post.replies ?? comments.length;
+  const canManagePost = Boolean(currentUserName && post.autor === currentUserName);
 
-  const handleLike = () => {
-    setLikes((prev) => prev + 1);
-  };
+  const handleLike = () => onReact(post.id, 'like');
+  const handleDislike = () => onReact(post.id, 'dislike');
 
   const handleReplyToggle = () => {
     if (!commentsOpen) setCommentsOpen(true);
@@ -68,18 +101,59 @@ export function PostItem({ post }: { post: Post }) {
 
   const handleReplySubmit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (!replyText.trim()) return;
-    const newComment: PostComment = {
-      id: `${post.id}-reply-${Date.now()}`,
-      autor: 'Você',
-      conteudo: replyText.trim(),
-      createdAt: new Date().toISOString(),
-    };
-    setCommentList((prev) => [newComment, ...prev]);
-    setReplies((prev) => prev + 1);
-    setCommentsOpen(true);
+    const trimmed = replyText.trim();
+    if (!trimmed) return;
+    onAddComment(post.id, trimmed);
     setReplyText('');
     setIsReplyOpen(false);
+    setCommentsOpen(true);
+  };
+
+  const handlePostEditSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const trimmed = editedContent.trim();
+    if (!trimmed) return;
+    onEditPost(post.id, trimmed);
+    setIsEditingPost(false);
+  };
+
+  const handleCancelPostEdit = () => {
+    setIsEditingPost(false);
+    setEditedContent(post.conteudo);
+  };
+
+  const handleDeletePostClick = () => {
+    if (typeof window !== 'undefined' && !window.confirm('Deseja excluir este post?')) {
+      return;
+    }
+    onDeletePost(post.id);
+  };
+
+  const startEditComment = (comment: PostComment) => {
+    setEditingCommentId(comment.id);
+    setEditingCommentText(comment.conteudo);
+  };
+
+  const handleCommentEditSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!editingCommentId) return;
+    const trimmed = editingCommentText.trim();
+    if (!trimmed) return;
+    onEditComment(post.id, editingCommentId, trimmed);
+    setEditingCommentId(null);
+    setEditingCommentText('');
+  };
+
+  const handleCancelCommentEdit = () => {
+    setEditingCommentId(null);
+    setEditingCommentText('');
+  };
+
+  const handleDeleteCommentClick = (commentId: string) => {
+    if (typeof window !== 'undefined' && !window.confirm('Deseja excluir este comentário?')) {
+      return;
+    }
+    onDeleteComment(post.id, commentId);
   };
 
   return (
@@ -105,12 +179,63 @@ export function PostItem({ post }: { post: Post }) {
           <div className="flex flex-wrap items-center gap-2">
             <h3 className="text-sm font-semibold text-slate-900 dark:text-white">{post.autor}</h3>
             <span className="text-xs text-slate-500 dark:text-slate-400">{relativeTime}</span>
+            {post.updatedAt && <span className="text-xs text-slate-400 dark:text-slate-500">• editado</span>}
           </div>
           {post.titulo && <p className="mt-1 text-sm font-medium text-slate-800 dark:text-slate-200">{post.titulo}</p>}
         </div>
+        {canManagePost && (
+          <div className="ml-3 flex flex-col items-end gap-1">
+            {!isEditingPost && (
+              <button
+                type="button"
+                onClick={() => setIsEditingPost(true)}
+                className="rounded-full border border-slate-200 px-3 py-1 text-xs font-semibold text-slate-600 transition hover:border-primary-400 hover:text-primary-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 dark:border-slate-700 dark:text-slate-300 dark:hover:border-primary-400 dark:hover:text-primary-200 dark:focus-visible:ring-offset-slate-900"
+              >
+                Editar
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={handleDeletePostClick}
+              className="rounded-full border border-slate-200 px-3 py-1 text-xs font-semibold text-red-600 transition hover:border-red-300 hover:text-red-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:ring-offset-2 dark:border-slate-700 dark:text-red-300 dark:hover:border-red-400 dark:hover:text-red-200 dark:focus-visible:ring-offset-slate-900"
+            >
+              Excluir
+            </button>
+          </div>
+        )}
       </header>
 
-      <p className="mt-4 whitespace-pre-line text-sm text-slate-700 dark:text-slate-200">{post.conteudo}</p>
+      {isEditingPost ? (
+        <form onSubmit={handlePostEditSubmit} className="mt-4 space-y-3" aria-label="Editar post">
+          <label htmlFor={`${post.id}-edit`} className="text-xs font-medium text-slate-600 dark:text-slate-300">
+            Conteúdo do post
+          </label>
+          <textarea
+            id={`${post.id}-edit`}
+            value={editedContent}
+            onChange={(event) => setEditedContent(event.target.value)}
+            rows={4}
+            className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm transition focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+          />
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="submit"
+              className="rounded-lg bg-primary-600 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-primary-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-slate-900"
+            >
+              Salvar
+            </button>
+            <button
+              type="button"
+              onClick={handleCancelPostEdit}
+              className="rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-semibold text-slate-600 transition hover:border-primary-400 hover:text-primary-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 dark:border-slate-700 dark:text-slate-300 dark:hover:border-primary-400 dark:hover:text-primary-200 dark:focus-visible:ring-offset-slate-900"
+            >
+              Cancelar
+            </button>
+          </div>
+        </form>
+      ) : (
+        <p className="mt-4 whitespace-pre-line text-sm text-slate-700 dark:text-slate-200">{post.conteudo}</p>
+      )}
 
       {post.tags && post.tags.length > 0 && (
         <div className="mt-4 flex flex-wrap gap-2">
@@ -132,7 +257,15 @@ export function PostItem({ post }: { post: Post }) {
           className="inline-flex items-center gap-1 rounded-full border border-slate-200 px-3 py-1 text-xs font-semibold text-slate-600 transition hover:border-primary-400 hover:text-primary-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 dark:border-slate-700 dark:text-slate-300 dark:hover:border-primary-400 dark:hover:text-primary-200 dark:focus-visible:ring-offset-slate-900"
           aria-label={`Curtir post de ${post.autor}`}
         >
-          ❤️ {likes}
+          ❤️ {post.likes}
+        </button>
+        <button
+          type="button"
+          onClick={handleDislike}
+          className="inline-flex items-center gap-1 rounded-full border border-slate-200 px-3 py-1 text-xs font-semibold text-slate-600 transition hover:border-primary-400 hover:text-primary-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 dark:border-slate-700 dark:text-slate-300 dark:hover:border-primary-400 dark:hover:text-primary-200 dark:focus-visible:ring-offset-slate-900"
+          aria-label={`Descurtir post de ${post.autor}`}
+        >
+          👎 {dislikeCount}
         </button>
         <button
           type="button"
@@ -140,7 +273,7 @@ export function PostItem({ post }: { post: Post }) {
           aria-expanded={commentsOpen}
           className="inline-flex items-center gap-1 rounded-full border border-slate-200 px-3 py-1 text-xs font-semibold text-slate-600 transition hover:border-primary-400 hover:text-primary-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 dark:border-slate-700 dark:text-slate-300 dark:hover:border-primary-400 dark:hover:text-primary-200 dark:focus-visible:ring-offset-slate-900"
         >
-          💬 {replies}
+          💬 {commentCount}
         </button>
         <button
           type="button"
@@ -152,12 +285,14 @@ export function PostItem({ post }: { post: Post }) {
         </button>
       </div>
 
-      {commentsOpen && commentList.length > 0 && (
+      {commentsOpen && comments.length > 0 && (
         <div className="mt-4 space-y-3 border-l border-slate-200 pl-4 dark:border-slate-700">
-          {commentList.map((comment) => {
+          {comments.map((comment) => {
             const commentTime = formatRelativeTime(comment.createdAt);
             const initialsComment = getInitials(comment.autor);
             const avatarStyleComment = avatarColors[comment.autor.length % avatarColors.length];
+            const canManageComment = Boolean(currentUserName && comment.autor === currentUserName);
+            const isEditingCurrent = editingCommentId === comment.id;
             return (
               <div key={comment.id} className="flex items-start gap-3">
                 <span
@@ -170,10 +305,57 @@ export function PostItem({ post }: { post: Post }) {
                   <div className="flex flex-wrap items-center gap-2 text-xs">
                     <span className="font-semibold text-slate-700 dark:text-slate-200">{comment.autor}</span>
                     <span className="text-slate-500 dark:text-slate-400">{commentTime}</span>
+                    {comment.updatedAt && <span className="text-slate-400 dark:text-slate-500">• editado</span>}
                   </div>
-                  <p className="mt-2 text-sm text-slate-700 dark:text-slate-200">{comment.conteudo}</p>
-                  {typeof comment.likes === 'number' && (
-                    <span className="mt-2 inline-flex items-center gap-1 text-[11px] text-slate-500 dark:text-slate-400">❤️ {comment.likes}</span>
+                  {isEditingCurrent ? (
+                    <form onSubmit={handleCommentEditSubmit} className="mt-2 space-y-2" aria-label="Editar comentário">
+                      <textarea
+                        value={editingCommentText}
+                        onChange={(event) => setEditingCommentText(event.target.value)}
+                        rows={3}
+                        className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm transition focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
+                      />
+                      <div className="flex flex-wrap gap-2">
+                        <button
+                          type="submit"
+                          className="rounded-lg bg-primary-600 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-primary-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-slate-900"
+                        >
+                          Salvar
+                        </button>
+                        <button
+                          type="button"
+                          onClick={handleCancelCommentEdit}
+                          className="rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-semibold text-slate-600 transition hover:border-primary-400 hover:text-primary-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 dark:border-slate-700 dark:text-slate-300 dark:hover:border-primary-400 dark:hover:text-primary-200 dark:focus-visible:ring-offset-slate-900"
+                        >
+                          Cancelar
+                        </button>
+                      </div>
+                    </form>
+                  ) : (
+                    <>
+                      <p className="mt-2 text-sm text-slate-700 dark:text-slate-200">{comment.conteudo}</p>
+                      <div className="mt-2 flex flex-wrap items-center gap-3 text-[11px] text-slate-500 dark:text-slate-400">
+                        {typeof comment.likes === 'number' && <span>❤️ {comment.likes}</span>}
+                        {canManageComment && (
+                          <>
+                            <button
+                              type="button"
+                              onClick={() => startEditComment(comment)}
+                              className="rounded-full border border-slate-200 px-2 py-0.5 font-semibold text-slate-600 transition hover:border-primary-400 hover:text-primary-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 dark:border-slate-700 dark:text-slate-300 dark:hover:border-primary-400 dark:hover:text-primary-200 dark:focus-visible:ring-offset-slate-900"
+                            >
+                              Editar
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteCommentClick(comment.id)}
+                              className="rounded-full border border-slate-200 px-2 py-0.5 font-semibold text-red-600 transition hover:border-red-300 hover:text-red-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:ring-offset-2 dark:border-slate-700 dark:text-red-300 dark:hover:border-red-400 dark:hover:text-red-200 dark:focus-visible:ring-offset-slate-900"
+                            >
+                              Excluir
+                            </button>
+                          </>
+                        )}
+                      </div>
+                    </>
                   )}
                 </div>
               </div>

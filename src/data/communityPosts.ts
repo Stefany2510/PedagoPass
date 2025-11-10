@@ -4,6 +4,7 @@ export type PostComment = {
   conteudo: string;
   createdAt: string;
   likes?: number;
+  updatedAt?: string;
 };
 
 export type Post = {
@@ -14,9 +15,11 @@ export type Post = {
   conteudo: string;
   createdAt: string;
   likes: number;
+  dislikes?: number;
   replies: number;
   tags?: string[];
   comments?: PostComment[];
+  updatedAt?: string;
 };
 
 export const COMMUNITY_POSTS: Record<string, Post[]> = {

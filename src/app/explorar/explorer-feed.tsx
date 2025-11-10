@@ -5,7 +5,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import clsx from 'clsx';
-import type { Post } from '@/data/communityPosts';
+import type { Post, PostComment } from '@/data/communityPosts';
 import { PostComposer } from '@/components/PostComposer';
 import { PostItem } from '@/components/PostItem';
 import { useAuth } from '@/components/auth-provider';
@@ -117,6 +117,8 @@ export function ExplorerFeed({ initialPosts, suggestedCommunities }: ExplorerFee
   const [activeTab, setActiveTab] = useState<TabKey>('forYou');
   const [selectedTag, setSelectedTag] = useState<string | null>(null);
   const [search, setSearch] = useState('');
+  const currentUserName = user?.nome ?? null;
+  const viewerName = currentUserName ?? 'Você';
 
   const membershipSet = useMemo(() => new Set(memberships.map((item) => item.slug)), [memberships]);
 
@@ -175,7 +177,9 @@ export function ExplorerFeed({ initialPosts, suggestedCommunities }: ExplorerFee
       conteudo: payload.conteudo,
       createdAt: new Date().toISOString(),
       likes: 0,
+      dislikes: 0,
       replies: 0,
+      comments: [],
       tags: payload.tags,
       communitySlug: refCommunity?.slug ?? 'rede-geral',
       communityNome: refCommunity?.nome ?? 'Rede PedagoPass',
@@ -183,6 +187,82 @@ export function ExplorerFeed({ initialPosts, suggestedCommunities }: ExplorerFee
     };
 
     setPosts((prev) => [newPost, ...prev]);
+  };
+
+  const handlePostReaction = (postId: string, reaction: 'like' | 'dislike') => {
+    setPosts((prev) => prev.map((post) => {
+      if (post.id !== postId) return post;
+      if (reaction === 'like') {
+        return { ...post, likes: post.likes + 1 };
+      }
+      return { ...post, dislikes: (post.dislikes ?? 0) + 1 };
+    }));
+  };
+
+  const handleAddComment = (postId: string, content: string) => {
+  const commentAuthor = viewerName;
+    const newComment: PostComment = {
+      id: `${postId}-c-${Date.now()}`,
+      autor: commentAuthor,
+      conteudo: content,
+      createdAt: new Date().toISOString(),
+    };
+
+    setPosts((prev) => prev.map((post) => {
+      if (post.id !== postId) return post;
+      const nextComments = [newComment, ...(post.comments ?? [])];
+      return {
+        ...post,
+        comments: nextComments,
+        replies: nextComments.length,
+      };
+    }));
+  };
+
+  const handleEditPost = (postId: string, content: string) => {
+    const trimmed = content.trim();
+    if (!trimmed) return;
+    const timestamp = new Date().toISOString();
+    setPosts((prev) => prev.map((post) => (
+      post.id === postId
+        ? { ...post, conteudo: trimmed, updatedAt: timestamp }
+        : post
+    )));
+  };
+
+  const handleDeletePost = (postId: string) => {
+    setPosts((prev) => prev.filter((post) => post.id !== postId));
+  };
+
+  const handleEditComment = (postId: string, commentId: string, content: string) => {
+    const trimmed = content.trim();
+    if (!trimmed) return;
+    const timestamp = new Date().toISOString();
+    setPosts((prev) => prev.map((post) => {
+      if (post.id !== postId) return post;
+      const nextComments = (post.comments ?? []).map((comment) => (
+        comment.id === commentId
+          ? { ...comment, conteudo: trimmed, updatedAt: timestamp }
+          : comment
+      ));
+      return {
+        ...post,
+        comments: nextComments,
+        replies: nextComments.length,
+      };
+    }));
+  };
+
+  const handleDeleteComment = (postId: string, commentId: string) => {
+    setPosts((prev) => prev.map((post) => {
+      if (post.id !== postId) return post;
+      const nextComments = (post.comments ?? []).filter((comment) => comment.id !== commentId);
+      return {
+        ...post,
+        comments: nextComments,
+        replies: nextComments.length,
+      };
+    }));
   };
 
   const handleSuggestedToggle = (slug: string, isMember: boolean) => {
@@ -318,7 +398,16 @@ export function ExplorerFeed({ initialPosts, suggestedCommunities }: ExplorerFee
                     {post.communityNome}
                   </Link>
                 </div>
-                <PostItem post={post} />
+                <PostItem
+                  post={post}
+                  currentUserName={viewerName}
+                  onReact={handlePostReaction}
+                  onAddComment={handleAddComment}
+                  onEditPost={handleEditPost}
+                  onDeletePost={handleDeletePost}
+                  onEditComment={handleEditComment}
+                  onDeleteComment={handleDeleteComment}
+                />
               </div>
             ))
           )}

@@ -5,7 +5,7 @@ import clsx from 'clsx';
 import Image from 'next/image';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import type { Community } from '@/data/communities';
-import type { Post } from '@/data/communityPosts';
+import type { Post, PostComment } from '@/data/communityPosts';
 import { PostComposer } from '@/components/PostComposer';
 import { PostItem } from '@/components/PostItem';
 import { EmptyState } from '@/components/EmptyState';
@@ -39,6 +39,9 @@ export function CommunityClient({
   const [membershipBusy, setMembershipBusy] = useState(false);
   const { user, memberships, joinCommunity: joinCommunityCtx, leaveCommunity: leaveCommunityCtx } = useAuth();
 
+  const currentUserName = user?.nome ?? null;
+  const viewerName = currentUserName ?? 'Você';
+
   const isMember = useMemo(
     () => memberships.some((item) => item.slug === community.slug),
     [memberships, community.slug]
@@ -68,16 +71,107 @@ export function CommunityClient({
     const sanitizedTags = payload.tags.filter((tag) => tag.trim().length > 0);
     const newPost: Post = {
       id: `novo-${Date.now()}`,
-      autor: 'Você',
+  autor: viewerName,
       conteudo: payload.conteudo,
       createdAt: new Date().toISOString(),
       likes: 0,
+      dislikes: 0,
       replies: 0,
+      comments: [],
       ...(sanitizedTags.length ? { tags: sanitizedTags } : {}),
     };
 
     setPosts((prev) => [newPost, ...prev]);
     updatePage(1);
+  };
+
+  const handlePostReaction = (postId: string, reaction: 'like' | 'dislike') => {
+    setPosts((prev) => prev.map((post) => {
+      if (post.id !== postId) return post;
+      if (reaction === 'like') {
+        return { ...post, likes: post.likes + 1 };
+      }
+      const nextDislikes = (post.dislikes ?? 0) + 1;
+      return { ...post, dislikes: nextDislikes };
+    }));
+  };
+
+  const handleAddComment = (postId: string, content: string) => {
+  const commentAuthor = viewerName;
+    const newComment: PostComment = {
+      id: `${postId}-c-${Date.now()}`,
+      autor: commentAuthor,
+      conteudo: content,
+      createdAt: new Date().toISOString(),
+    };
+
+    setPosts((prev) => prev.map((post) => {
+      if (post.id !== postId) return post;
+      const nextComments = [newComment, ...(post.comments ?? [])];
+      return {
+        ...post,
+        comments: nextComments,
+        replies: nextComments.length,
+      };
+    }));
+  };
+
+  const handleEditPost = (postId: string, content: string) => {
+    const trimmed = content.trim();
+    if (!trimmed) return;
+    const timestamp = new Date().toISOString();
+    setPosts((prev) => prev.map((post) => (
+      post.id === postId
+        ? {
+            ...post,
+            conteudo: trimmed,
+            updatedAt: timestamp,
+          }
+        : post
+    )));
+  };
+
+  const handleDeletePost = (postId: string) => {
+    setPosts((prev) => {
+      const nextPosts = prev.filter((post) => post.id !== postId);
+      const nextTotalPages = nextPosts.length ? Math.ceil(nextPosts.length / postsPerPage) : 1;
+      const safePage = Math.min(currentPage, nextTotalPages);
+      if (safePage !== currentPage) {
+        updatePage(safePage);
+      }
+      return nextPosts;
+    });
+  };
+
+  const handleEditComment = (postId: string, commentId: string, content: string) => {
+    const trimmed = content.trim();
+    if (!trimmed) return;
+    const timestamp = new Date().toISOString();
+    setPosts((prev) => prev.map((post) => {
+      if (post.id !== postId) return post;
+      const nextComments = (post.comments ?? []).map((comment) => (
+        comment.id === commentId
+          ? { ...comment, conteudo: trimmed, updatedAt: timestamp }
+          : comment
+      ));
+      return {
+        ...post,
+        comments: nextComments,
+        replies: nextComments.length,
+      };
+    }));
+  };
+
+  const handleDeleteComment = (postId: string, commentId: string) => {
+    setPosts((prev) => prev.map((post) => {
+      if (post.id !== postId) return post;
+      const nextComments = (post.comments ?? []).filter((comment) => comment.id !== commentId);
+      return {
+        ...post,
+        comments: nextComments,
+        replies: nextComments.length,
+      };
+    }));
   };
 
   const handleMembershipToggle = () => {
@@ -196,7 +290,17 @@ export function CommunityClient({
           ) : (
             <div className="space-y-6">
               {paginatedPosts.map((post) => (
-                <PostItem key={post.id} post={post} />
+                <PostItem
+                  key={post.id}
+                  post={post}
+                  currentUserName={viewerName}
+                  onReact={handlePostReaction}
+                  onAddComment={handleAddComment}
+                  onEditPost={handleEditPost}
+                  onDeletePost={handleDeletePost}
+                  onEditComment={handleEditComment}
+                  onDeleteComment={handleDeleteComment}
+                />
               ))}
             </div>
           )}
