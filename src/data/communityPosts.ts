@@ -4,7 +4,9 @@ export type PostComment = {
   conteudo: string;
   createdAt: string;
   likes?: number;
+  dislikes?: number;
   updatedAt?: string;
+  reaction?: 'like' | 'dislike' | null;
 };
 
 export type Post = {

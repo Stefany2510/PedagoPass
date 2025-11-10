@@ -50,6 +50,7 @@ type PostItemProps = {
   onDeletePost: (postId: string) => void;
   onEditComment: (postId: string, commentId: string, content: string) => void;
   onDeleteComment: (postId: string, commentId: string) => void;
+  onReactComment: (postId: string, commentId: string, nextReaction: 'like' | 'dislike' | null) => void;
 };
 
 export function PostItem({
@@ -61,6 +62,7 @@ export function PostItem({
   onDeletePost,
   onEditComment,
   onDeleteComment,
+  onReactComment,
 }: PostItemProps) {
   const comments = post.comments ?? [];
   const [isReplyOpen, setIsReplyOpen] = useState(false);
@@ -308,6 +310,11 @@ export function PostItem({
             const avatarStyleComment = avatarColors[comment.autor.length % avatarColors.length];
             const canManageComment = Boolean(currentUserName && comment.autor === currentUserName);
             const isEditingCurrent = editingCommentId === comment.id;
+            const commentLikes = comment.likes ?? 0;
+            const commentDislikes = comment.dislikes ?? 0;
+            const commentReaction = comment.reaction ?? null;
+            const isCommentLiked = commentReaction === 'like';
+            const isCommentDisliked = commentReaction === 'dislike';
             return (
               <div key={comment.id} className="flex items-start gap-3">
                 <span
@@ -350,7 +357,34 @@ export function PostItem({
                     <>
                       <p className="mt-2 text-sm text-slate-700 dark:text-slate-200">{comment.conteudo}</p>
                       <div className="mt-2 flex flex-wrap items-center gap-3 text-[11px] text-slate-500 dark:text-slate-400">
-                        {typeof comment.likes === 'number' && <span>❤️ {comment.likes}</span>}
+                        <button
+                          type="button"
+                          onClick={() => onReactComment(post.id, comment.id, isCommentLiked ? null : 'like')}
+                          className={clsx(
+                            'inline-flex items-center gap-1 rounded-full border px-2 py-0.5 font-semibold transition focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-slate-900',
+                            isCommentLiked
+                              ? 'border-primary-500 bg-primary-100 text-primary-700 dark:border-primary-400 dark:bg-primary-900/30 dark:text-primary-200'
+                              : 'border-slate-200 text-slate-600 hover:border-primary-400 hover:text-primary-700 dark:border-slate-700 dark:text-slate-300 dark:hover:border-primary-400 dark:hover:text-primary-200'
+                          )}
+                          aria-pressed={isCommentLiked}
+                          aria-label={`Curtir comentário de ${comment.autor}`}
+                        >
+                          ❤️ {commentLikes}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => onReactComment(post.id, comment.id, isCommentDisliked ? null : 'dislike')}
+                          className={clsx(
+                            'inline-flex items-center gap-1 rounded-full border px-2 py-0.5 font-semibold transition focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-slate-900',
+                            isCommentDisliked
+                              ? 'border-red-400 bg-red-100 text-red-600 dark:border-red-400 dark:bg-red-900/30 dark:text-red-200'
+                              : 'border-slate-200 text-slate-600 hover:border-red-300 hover:text-red-600 dark:border-slate-700 dark:text-slate-300 dark:hover:border-red-400 dark:hover:text-red-200'
+                          )}
+                          aria-pressed={isCommentDisliked}
+                          aria-label={`Descurtir comentário de ${comment.autor}`}
+                        >
+                          👎 {commentDislikes}
+                        </button>
                         {canManageComment && (
                           <>
                             <button

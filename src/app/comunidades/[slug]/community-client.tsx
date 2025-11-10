@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import clsx from 'clsx';
 import Image from 'next/image';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
@@ -41,6 +41,8 @@ export function CommunityClient({
 
   const currentUserName = user?.nome ?? null;
   const viewerName = currentUserName ?? 'Você';
+  const storageKey = useMemo(() => `pp.community.${community.slug}.posts`, [community.slug]);
+  const [hydrated, setHydrated] = useState(false);
 
   const isMember = useMemo(
     () => memberships.some((item) => item.slug === community.slug),
@@ -55,6 +57,35 @@ export function CommunityClient({
 
   const startIndex = (currentPage - 1) * postsPerPage;
   const paginatedPosts = posts.slice(startIndex, startIndex + postsPerPage);
+
+  useEffect(() => {
+    let isActive = true;
+    try {
+      const stored = localStorage.getItem(storageKey);
+      if (stored) {
+        const parsed = JSON.parse(stored) as Post[];
+        if (Array.isArray(parsed) && isActive) {
+          setPosts(parsed);
+        }
+      }
+    } catch (error) {
+      console.warn('Não foi possível restaurar posts salvos da comunidade.', error);
+    } finally {
+      if (isActive) setHydrated(true);
+    }
+    return () => {
+      isActive = false;
+    };
+  }, [storageKey]);
+
+  useEffect(() => {
+    if (!hydrated) return;
+    try {
+      localStorage.setItem(storageKey, JSON.stringify(posts));
+    } catch (error) {
+      console.warn('Não foi possível salvar posts da comunidade localmente.', error);
+    }
+  }, [posts, hydrated, storageKey]);
 
   const updatePage = (page: number) => {
     const params = new URLSearchParams(searchParams.toString());
@@ -121,11 +152,50 @@ export function CommunityClient({
       autor: commentAuthor,
       conteudo: content,
       createdAt: new Date().toISOString(),
+      likes: 0,
+      dislikes: 0,
+      reaction: null,
     };
 
     setPosts((prev) => prev.map((post) => {
       if (post.id !== postId) return post;
       const nextComments = [newComment, ...(post.comments ?? [])];
+      return {
+        ...post,
+        comments: nextComments,
+        replies: nextComments.length,
+      };
+    }));
+  };
+
+  const handleReactComment = (postId: string, commentId: string, nextReaction: 'like' | 'dislike' | null) => {
+    setPosts((prev) => prev.map((post) => {
+      if (post.id !== postId) return post;
+      const nextComments = (post.comments ?? []).map((comment) => {
+        if (comment.id !== commentId) return comment;
+        const currentReaction = comment.reaction ?? null;
+        let likes = comment.likes ?? 0;
+        let dislikes = comment.dislikes ?? 0;
+
+        if (currentReaction === 'like') {
+          likes = Math.max(0, likes - 1);
+        } else if (currentReaction === 'dislike') {
+          dislikes = Math.max(0, dislikes - 1);
+        }
+
+        if (nextReaction === 'like') {
+          likes += 1;
+        } else if (nextReaction === 'dislike') {
+          dislikes += 1;
+        }
+
+        return {
+          ...comment,
+          likes,
+          dislikes,
+          reaction: nextReaction,
+        };
+      });
       return {
         ...post,
         comments: nextComments,
@@ -318,6 +388,7 @@ export function CommunityClient({
                   onDeletePost={handleDeletePost}
                   onEditComment={handleEditComment}
                   onDeleteComment={handleDeleteComment}
+                  onReactComment={handleReactComment}
                 />
               ))}
             </div>

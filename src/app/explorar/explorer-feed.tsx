@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
@@ -119,6 +119,37 @@ export function ExplorerFeed({ initialPosts, suggestedCommunities }: ExplorerFee
   const [search, setSearch] = useState('');
   const currentUserName = user?.nome ?? null;
   const viewerName = currentUserName ?? 'Você';
+  const storageKey = 'pp.explorer.posts';
+  const [hydrated, setHydrated] = useState(false);
+
+  useEffect(() => {
+    let isActive = true;
+    try {
+      const stored = localStorage.getItem(storageKey);
+      if (stored) {
+        const parsed = JSON.parse(stored) as ExplorerPost[];
+        if (Array.isArray(parsed) && isActive) {
+          setPosts(parsed);
+        }
+      }
+    } catch (error) {
+      console.warn('Não foi possível restaurar posts do explorar.', error);
+    } finally {
+      if (isActive) setHydrated(true);
+    }
+    return () => {
+      isActive = false;
+    };
+  }, [storageKey]);
+
+  useEffect(() => {
+    if (!hydrated) return;
+    try {
+      localStorage.setItem(storageKey, JSON.stringify(posts));
+    } catch (error) {
+      console.warn('Não foi possível salvar posts do explorar.', error);
+    }
+  }, [posts, hydrated, storageKey]);
 
   const membershipSet = useMemo(() => new Set(memberships.map((item) => item.slug)), [memberships]);
 
@@ -225,11 +256,50 @@ export function ExplorerFeed({ initialPosts, suggestedCommunities }: ExplorerFee
       autor: commentAuthor,
       conteudo: content,
       createdAt: new Date().toISOString(),
+      likes: 0,
+      dislikes: 0,
+      reaction: null,
     };
 
     setPosts((prev) => prev.map((post) => {
       if (post.id !== postId) return post;
       const nextComments = [newComment, ...(post.comments ?? [])];
+      return {
+        ...post,
+        comments: nextComments,
+        replies: nextComments.length,
+      };
+    }));
+  };
+
+  const handleReactComment = (postId: string, commentId: string, nextReaction: 'like' | 'dislike' | null) => {
+    setPosts((prev) => prev.map((post) => {
+      if (post.id !== postId) return post;
+      const nextComments = (post.comments ?? []).map((comment) => {
+        if (comment.id !== commentId) return comment;
+        const currentReaction = comment.reaction ?? null;
+        let likes = comment.likes ?? 0;
+        let dislikes = comment.dislikes ?? 0;
+
+        if (currentReaction === 'like') {
+          likes = Math.max(0, likes - 1);
+        } else if (currentReaction === 'dislike') {
+          dislikes = Math.max(0, dislikes - 1);
+        }
+
+        if (nextReaction === 'like') {
+          likes += 1;
+        } else if (nextReaction === 'dislike') {
+          dislikes += 1;
+        }
+
+        return {
+          ...comment,
+          likes,
+          dislikes,
+          reaction: nextReaction,
+        };
+      });
       return {
         ...post,
         comments: nextComments,
@@ -426,6 +496,7 @@ export function ExplorerFeed({ initialPosts, suggestedCommunities }: ExplorerFee
                   onDeletePost={handleDeletePost}
                   onEditComment={handleEditComment}
                   onDeleteComment={handleDeleteComment}
+                  onReactComment={handleReactComment}
                 />
               </div>
             ))
