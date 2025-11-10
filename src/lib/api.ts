@@ -91,6 +91,28 @@ export async function apiLogout() {
   setToken(null);
 }
 
+export async function apiResetPasswordLookup(email: string): Promise<{ found: boolean }> {
+  try {
+    const data = await request<{ ok: boolean; found: boolean }>(`/auth/reset-password`, {
+      method: 'POST',
+      body: JSON.stringify({ email }),
+    });
+    return { found: Boolean(data.found) };
+  } catch (error: any) {
+    if (error?.status === 404) {
+      return { found: false };
+    }
+    throw error;
+  }
+}
+
+export async function apiResetPasswordUpdate(params: { email: string; senha: string }) {
+  await request(`/auth/reset-password`, {
+    method: 'POST',
+    body: JSON.stringify(params),
+  });
+}
+
 export async function apiMe(): Promise<ApiUser | null> {
   try {
     const data = await request<{ ok: boolean; user: ApiUser | null }>(`/auth/me`, { method: 'GET' });
