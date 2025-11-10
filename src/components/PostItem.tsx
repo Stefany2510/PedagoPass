@@ -44,7 +44,7 @@ function getInitials(name: string) {
 type PostItemProps = {
   post: Post;
   currentUserName: string | null;
-  onReact: (postId: string, reaction: 'like' | 'dislike') => void;
+  onReact: (postId: string, nextReaction: 'like' | 'dislike' | null) => void;
   onAddComment: (postId: string, content: string) => void;
   onEditPost: (postId: string, content: string) => void;
   onDeletePost: (postId: string) => void;
@@ -87,9 +87,12 @@ export function PostItem({
   const dislikeCount = post.dislikes ?? 0;
   const commentCount = post.replies ?? comments.length;
   const canManagePost = Boolean(currentUserName && post.autor === currentUserName);
+  const myReaction = post.reaction ?? null;
+  const isLiked = myReaction === 'like';
+  const isDisliked = myReaction === 'dislike';
 
-  const handleLike = () => onReact(post.id, 'like');
-  const handleDislike = () => onReact(post.id, 'dislike');
+  const handleLike = () => onReact(post.id, isLiked ? null : 'like');
+  const handleDislike = () => onReact(post.id, isDisliked ? null : 'dislike');
 
   const handleReplyToggle = () => {
     if (!commentsOpen) setCommentsOpen(true);
@@ -254,7 +257,13 @@ export function PostItem({
         <button
           type="button"
           onClick={handleLike}
-          className="inline-flex items-center gap-1 rounded-full border border-slate-200 px-3 py-1 text-xs font-semibold text-slate-600 transition hover:border-primary-400 hover:text-primary-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 dark:border-slate-700 dark:text-slate-300 dark:hover:border-primary-400 dark:hover:text-primary-200 dark:focus-visible:ring-offset-slate-900"
+          className={clsx(
+            'inline-flex items-center gap-1 rounded-full border px-3 py-1 text-xs font-semibold transition focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-slate-900',
+            isLiked
+              ? 'border-primary-500 bg-primary-100 text-primary-700 dark:border-primary-400 dark:bg-primary-900/30 dark:text-primary-200'
+              : 'border-slate-200 text-slate-600 hover:border-primary-400 hover:text-primary-700 dark:border-slate-700 dark:text-slate-300 dark:hover:border-primary-400 dark:hover:text-primary-200'
+          )}
+          aria-pressed={isLiked}
           aria-label={`Curtir post de ${post.autor}`}
         >
           ❤️ {post.likes}
@@ -262,7 +271,13 @@ export function PostItem({
         <button
           type="button"
           onClick={handleDislike}
-          className="inline-flex items-center gap-1 rounded-full border border-slate-200 px-3 py-1 text-xs font-semibold text-slate-600 transition hover:border-primary-400 hover:text-primary-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 dark:border-slate-700 dark:text-slate-300 dark:hover:border-primary-400 dark:hover:text-primary-200 dark:focus-visible:ring-offset-slate-900"
+          className={clsx(
+            'inline-flex items-center gap-1 rounded-full border px-3 py-1 text-xs font-semibold transition focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-slate-900',
+            isDisliked
+              ? 'border-red-400 bg-red-100 text-red-600 dark:border-red-400 dark:bg-red-900/30 dark:text-red-200'
+              : 'border-slate-200 text-slate-600 hover:border-red-300 hover:text-red-600 dark:border-slate-700 dark:text-slate-300 dark:hover:border-red-400 dark:hover:text-red-200'
+          )}
+          aria-pressed={isDisliked}
           aria-label={`Descurtir post de ${post.autor}`}
         >
           👎 {dislikeCount}

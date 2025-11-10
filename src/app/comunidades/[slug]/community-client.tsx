@@ -78,6 +78,7 @@ export function CommunityClient({
       dislikes: 0,
       replies: 0,
       comments: [],
+      reaction: null,
       ...(sanitizedTags.length ? { tags: sanitizedTags } : {}),
     };
 
@@ -85,14 +86,31 @@ export function CommunityClient({
     updatePage(1);
   };
 
-  const handlePostReaction = (postId: string, reaction: 'like' | 'dislike') => {
+  const handlePostReaction = (postId: string, nextReaction: 'like' | 'dislike' | null) => {
     setPosts((prev) => prev.map((post) => {
       if (post.id !== postId) return post;
-      if (reaction === 'like') {
-        return { ...post, likes: post.likes + 1 };
+      const currentReaction = post.reaction ?? null;
+      let likes = post.likes;
+      let dislikes = post.dislikes ?? 0;
+
+      if (currentReaction === 'like') {
+        likes = Math.max(0, likes - 1);
+      } else if (currentReaction === 'dislike') {
+        dislikes = Math.max(0, dislikes - 1);
       }
-      const nextDislikes = (post.dislikes ?? 0) + 1;
-      return { ...post, dislikes: nextDislikes };
+
+      if (nextReaction === 'like') {
+        likes += 1;
+      } else if (nextReaction === 'dislike') {
+        dislikes += 1;
+      }
+
+      return {
+        ...post,
+        likes,
+        dislikes,
+        reaction: nextReaction,
+      };
     }));
   };
 

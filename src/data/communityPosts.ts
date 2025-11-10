@@ -20,6 +20,7 @@ export type Post = {
   tags?: string[];
   comments?: PostComment[];
   updatedAt?: string;
+  reaction?: 'like' | 'dislike' | null;
 };
 
 export const COMMUNITY_POSTS: Record<string, Post[]> = {
