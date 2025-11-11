@@ -148,3 +148,38 @@ export async function signupDev(_req: Request, res: Response) {
 }
 
 export { loginCookieMode };
+
+export async function resetPassword(req: Request, res: Response) {
+  const { email, senha } = req.body as { email?: string; senha?: string };
+  if (!email || !email.trim()) {
+    return res.status(400).json({ ok: false, error: 'Informe o e-mail cadastrado.' });
+  }
+
+  const normalizedEmail = email.toLowerCase();
+
+  try {
+    const user = await prisma.user.findUnique({ where: { email: normalizedEmail } });
+    if (!user) {
+      // Não revelar se o e-mail existe: responder 200 com found=false para evitar 404 no cliente
+      return res.json({ ok: true, found: false });
+    }
+
+    if (!senha) {
+      return res.json({ ok: true, found: true });
+    }
+
+    if (senha.length < 6) {
+      return res.status(400).json({ ok: false, error: 'A nova senha deve ter ao menos 6 caracteres.' });
+    }
+
+    await prisma.user.update({
+      where: { email: normalizedEmail },
+      data: { passwordHash: hashPassword(senha) },
+    });
+
+  return res.json({ ok: true, updated: true });
+  } catch (error) {
+    console.error('Reset password error:', error);
+    return res.status(500).json({ ok: false, error: 'internal_error' });
+  }
+}

@@ -92,18 +92,11 @@ export async function apiLogout() {
 }
 
 export async function apiResetPasswordLookup(email: string): Promise<{ found: boolean }> {
-  try {
-    const data = await request<{ ok: boolean; found: boolean }>(`/auth/reset-password`, {
-      method: 'POST',
-      body: JSON.stringify({ email }),
-    });
-    return { found: Boolean(data.found) };
-  } catch (error: any) {
-    if (error?.status === 404) {
-      return { found: false };
-    }
-    throw error;
-  }
+  const data = await request<{ ok: boolean; found: boolean }>(`/auth/reset-password`, {
+    method: 'POST',
+    body: JSON.stringify({ email }),
+  });
+  return { found: Boolean(data.found) };
 }
 
 export async function apiResetPasswordUpdate(params: { email: string; senha: string }) {

@@ -11,5 +11,6 @@ router.post('/logout', authCtrl.logout);
 router.get('/me', requireAuth, authCtrl.me);
 router.post('/quick-token', requireAuth, authCtrl.createQuickToken);
 router.post('/login/quick', authCtrl.loginWithQuickToken);
+router.post('/reset-password', authCtrl.resetPassword);
 
 export default router;
